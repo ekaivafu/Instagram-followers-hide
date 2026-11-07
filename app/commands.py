@@ -4,7 +4,13 @@ import logging
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import BotCommand, BotCommandScopeChat
+from aiogram.types import (
+    BotCommand,
+    BotCommandScopeAllGroupChats,
+    BotCommandScopeAllPrivateChats,
+    BotCommandScopeChat,
+    BotCommandScopeDefault,
+)
 
 from app.config import settings
 
@@ -24,7 +30,13 @@ ADMIN_COMMAND = BotCommand(command="admin", description="Admin panel")
 
 
 async def set_default_commands(bot: Bot) -> None:
-    await bot.set_my_commands(BASE_COMMANDS)
+    # Default fallback (also clears any old unscoped command list).
+    await bot.set_my_commands(BASE_COMMANDS, scope=BotCommandScopeDefault())
+    # Full menu in private chats only.
+    await bot.set_my_commands(BASE_COMMANDS, scope=BotCommandScopeAllPrivateChats())
+    # No command menu in groups/supergroups, even though the bot stays there
+    # so it can check force-join membership.
+    await bot.set_my_commands([], scope=BotCommandScopeAllGroupChats())
 
 
 async def set_admin_commands_for(bot: Bot, admin_id: int) -> bool:

@@ -57,6 +57,7 @@ What the bot *does* store is limited to normal bot data: Telegram user ID, usern
 - **Profile** — see token balance, successful hides, and referral stats.
 - **Help menu** — clear, step-by-step instructions for getting the session ID on PC.
 - **Force join** — users must join all required channels/groups before using the bot.
+- **Silent in groups** — no command menu and no replies; the bot stays there only for force-join checks.
 - **No link previews** — previews are disabled globally.
 
 ### Admin side
@@ -68,6 +69,18 @@ What the bot *does* store is limited to normal bot data: Telegram user ID, usern
 - **Pending Redemptions** — mark manual rewards as completed and notify the user.
 - **Statistics** — users, successful hides, tokens held, referrals, and pending requests.
 - **Unlimited admin tokens** — admin accounts hide and redeem for free.
+
+---
+
+## 🔇 Group behaviour
+
+The bot is designed to stay **completely silent in groups**:
+
+- No command menu is shown in groups or supergroups.
+- It never replies to messages, commands, or button presses there.
+- Adding it to a private group is still supported and useful — it can check
+  force-join membership for private required chats.
+- All user interaction happens in the bot's private chat.
 
 ---
 

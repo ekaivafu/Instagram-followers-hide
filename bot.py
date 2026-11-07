@@ -24,7 +24,11 @@ from app.handlers import (
     hide_router,
     referral_router,
 )
-from app.middlewares import DatabaseMiddleware, ForceJoinMiddleware
+from app.middlewares import (
+    DatabaseMiddleware,
+    ForceJoinMiddleware,
+    IgnoreGroupsMiddleware,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +40,9 @@ logger = logging.getLogger("bot")
 def build_dispatcher(session_factory) -> Dispatcher:
     dispatcher = Dispatcher(storage=MemoryStorage())
 
+    # Drop group/channel updates before anything else, so the bot stays silent.
+    dispatcher.message.middleware(IgnoreGroupsMiddleware())
+    dispatcher.callback_query.middleware(IgnoreGroupsMiddleware())
     dispatcher.message.middleware(DatabaseMiddleware(session_factory))
     dispatcher.callback_query.middleware(DatabaseMiddleware(session_factory))
     dispatcher.message.middleware(ForceJoinMiddleware())

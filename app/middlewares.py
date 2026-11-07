@@ -15,6 +15,31 @@ from app.membership import get_missing_chats, join_prompt
 logger = logging.getLogger(__name__)
 
 
+class IgnoreGroupsMiddleware(BaseMiddleware):
+    """Keep the bot completely silent in groups, supergroups and channels.
+
+    The bot may be added to private groups only so it can verify force-join
+    membership. It should never reply there, and no command menu is shown.
+    """
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
+        chat = None
+        if isinstance(event, Message):
+            chat = event.chat
+        elif isinstance(event, CallbackQuery) and event.message is not None:
+            chat = event.message.chat
+
+        if chat is not None and chat.type in {"group", "supergroup", "channel"}:
+            return None
+
+        return await handler(event, data)
+
+
 class DatabaseMiddleware(BaseMiddleware):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self.session_factory = session_factory

@@ -75,6 +75,31 @@ async def health(_: web.Request) -> web.Response:
     return web.json_response({"status": "ok"})
 
 
+async def _webhook_watchdog(
+    bot: Bot,
+    url: str,
+    secret: str | None,
+    allowed_updates: list[str],
+) -> None:
+    """Re-register the webhook if it disappears (e.g. during a redeploy)."""
+    while True:
+        await asyncio.sleep(60)
+        try:
+            info = await bot.get_webhook_info()
+            if info.url != url:
+                logger.warning("Webhook missing (found %r); restoring it.", info.url)
+                await bot.set_webhook(
+                    url,
+                    secret_token=secret,
+                    drop_pending_updates=False,
+                    allowed_updates=allowed_updates,
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Webhook watchdog failed; will retry")
+
+
 async def run_webhook(bot: Bot, dispatcher: Dispatcher) -> None:
     app = web.Application()
     webhook_path = urlsplit(settings.webhook_url or "").path or "/webhook"
@@ -93,13 +118,23 @@ async def run_webhook(bot: Bot, dispatcher: Dispatcher) -> None:
     site = web.TCPSite(runner, host="0.0.0.0", port=settings.port)
     await site.start()
 
+    allowed_updates = dispatcher.resolve_used_update_types()
     await bot.set_webhook(
         settings.webhook_url,
         secret_token=settings.webhook_secret,
         drop_pending_updates=False,
-        allowed_updates=dispatcher.resolve_used_update_types(),
+        allowed_updates=allowed_updates,
     )
     logger.info("Webhook listening on %s:%s%s", "0.0.0.0", settings.port, webhook_path)
+
+    watchdog = asyncio.create_task(
+        _webhook_watchdog(
+            bot,
+            settings.webhook_url or "",
+            settings.webhook_secret,
+            allowed_updates,
+        )
+    )
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -112,7 +147,13 @@ async def run_webhook(bot: Bot, dispatcher: Dispatcher) -> None:
     try:
         await stop.wait()
     finally:
-        await bot.delete_webhook()
+        # Never delete the webhook here: on Render the next instance may already
+        # have registered it, and deleting would race with the new deployment.
+        watchdog.cancel()
+        try:
+            await watchdog
+        except asyncio.CancelledError:
+            pass
         await runner.cleanup()
 
 

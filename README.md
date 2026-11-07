@@ -52,7 +52,7 @@ What the bot *does* store is limited to normal bot data: Telegram user ID, usern
 
 - **Hide followers & following** by sending an Instagram `sessionid`.
 - **Token system** — each successful hide costs tokens.
-- **Referral program** — invite friends and earn 1 token per successful referral.
+- **Referral program** — invite friends and earn 1 token as soon as they join the bot.
 - **Redeem shop** — spend tokens on rewards with automatic or manual delivery.
 - **Profile** — see token balance, successful hides, and referral stats.
 - **Help menu** — clear, step-by-step instructions for getting the session ID on PC.
@@ -97,8 +97,7 @@ The bot is designed to stay **completely silent in groups**:
 7. It checks that Instagram returned `{"value": true}`.
 8. On failure, the reserved token is **refunded** and the user sees an error.
 9. On success, the successful-hide counter increases.
-10. If this is the invited user's **first** successful hide, the referrer receives referral tokens.
-11. The user sees the result, tokens spent, and remaining balance.
+10. The user sees the result, tokens spent, and remaining balance.
 
 The request toggles exactly one Instagram privacy setting. It **does not**:
 
@@ -119,13 +118,20 @@ The Instagram session can expire, require a verification challenge, or be blocke
 
 | Setting | Default | Meaning |
 |---|---|---|
-| Referral reward | `1` | Tokens earned per successful referral |
+| Referral reward | `1` | Tokens earned when a friend joins |
 | Hide cost | `1` | Tokens spent per successful hide |
 | Welcome bonus | `1` | Tokens given to every new user |
 
 - A new user receives the welcome bonus on signup.
 - The hide cost is reserved before the request and refunded if the hide fails.
-- A referral is credited only after the invited user completes their **first successful hide**.
+- A referral is credited as soon as the invited user joins the bot through the
+  referral link (after passing force-join), and the referrer is notified with
+  the friend's name and new balance.
+- Referrals are credited **once**: `users.referral_credited` makes the payout idempotent.
+- A user can never be credited for referring their **own** Telegram account.
+- Only unattributed accounts that have never completed a hide or redeemed a
+  reward can be claimed by a referral link, so active users cannot be
+  retroactively claimed.
 - Users with no tokens see a low-credit notice with a contact button.
 - Admin accounts have **♾ unlimited** tokens.
 - Settings can be changed anytime in **Admin → Token Settings**.
@@ -259,11 +265,11 @@ app/
   middlewares.py           database session + force-join gate
   membership.py            join verification and cache
   keyboards.py             inline keyboards
-  services.py              registration, referrals, links
+  services.py              registration, referral credit, links
   states.py                FSM states
   handlers/
     base.py                /start, menu, profile, help
-    hide.py                sessionid flow, token charge, referral credit
+    hide.py                sessionid flow and token charge
     referral.py            referrals and redeem shop (user side)
     admin.py               admin stats, chats, token settings, give tokens
     admin_items.py         redeem item management
@@ -306,6 +312,7 @@ Issues and pull requests are welcome. Please:
 
 - keep changes focused and readable,
 - run `ruff check bot.py app --select F,E9` before opening a PR,
+- run `python tests/referral_flow_check.py` after touching the referral or token logic,
 - never commit secrets, `.env`, or database files,
 - follow the responsible-use disclaimer above.
 

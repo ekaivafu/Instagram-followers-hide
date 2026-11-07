@@ -8,9 +8,11 @@ from aiogram.types import CallbackQuery, Message, TelegramObject
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import settings
+from app.db import User
 from app.errors import TelegramError
 from app.keyboards import join_kb
 from app.membership import get_missing_chats, join_prompt
+from app.services import credit_referral_if_due
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +82,11 @@ class ForceJoinMiddleware(BaseMiddleware):
 
         missing = await get_missing_chats(bot, session, user.id)
         if not missing:
+            # They passed force-join, so if they arrived through a referral link
+            # the referrer can be credited now (idempotent, self-referral safe).
+            db_user = await session.get(User, user.id)
+            if db_user is not None:
+                await credit_referral_if_due(bot, session, db_user)
             return await handler(event, data)
 
         prompt = join_prompt(missing)

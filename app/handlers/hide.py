@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -11,12 +11,12 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.db import User, get_hide_cost, get_referral_points
+from app.db import User, get_hide_cost
 from app.instagram import hide_lists, instagram_user_id
 from app.keyboards import low_credit_kb
 from app.services import register_user
 from app.states import HideFlow
-from app.utils import esc, safe_send
+from app.utils import esc
 
 logger = logging.getLogger(__name__)
 router = Router(name="hide")
@@ -42,7 +42,7 @@ def low_credit_text(points: int, cost: int) -> str:
         f"A hide costs <b>{cost} {_token_word(cost)}</b>, "
         f"but your balance is <b>{points}</b>.\n\n"
         "How to get tokens:\n"
-        "• Invite friends — you earn tokens when they complete their first hide\n"
+        "• Invite friends — you earn tokens as soon as they join the bot\n"
         "• Redeem rewards with your tokens\n"
     )
     if settings.support_username:
@@ -142,7 +142,6 @@ async def handle_sessionid(
     message: Message,
     state: FSMContext,
     session: AsyncSession,
-    bot: Bot,
 ) -> None:
     await state.clear()
     if message.from_user is None:
@@ -238,28 +237,8 @@ async def handle_sessionid(
         return
 
     user.total_success += 1
-
-    credited: tuple[int, int] | None = None
-    if not user.referral_credited and user.referred_by:
-        referrer = await session.get(User, user.referred_by)
-        if referrer is not None:
-            points = await get_referral_points(session)
-            referrer.points += points
-            credited = (referrer.user_id, points)
-        user.referral_credited = True
-
     await session.commit()
     await session.refresh(user)
-
-    if credited is not None:
-        await safe_send(
-            bot,
-            credited[0],
-            "🎉 <b>Referral reward!</b>\n\n"
-            f"A friend you invited completed their first hide. You earned "
-            f"<b>{credited[1]} {_token_word(credited[1])}</b>.\n\n"
-            "Use /hide to hide an account or /redeem to claim a reward.",
-        )
 
     if unlimited:
         spent = "💵 Cost: free (admin)\n"

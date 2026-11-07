@@ -131,8 +131,8 @@ def referral_view(points: int, hide_cost: int, welcome_tokens: int) -> str:
         f"🔗 Referral reward: <b>{points}</b> token(s) per invite\n"
         f"💵 Hide cost: <b>{hide_cost}</b> token(s) per hide\n"
         f"🎁 Welcome bonus: <b>{welcome_tokens}</b> token(s) for new users\n\n"
-        "A referral is credited when an invited user completes their first "
-        "successful hide. Set a value to 0 to disable it."
+        "A referral is credited as soon as the invited user joins the bot "
+        "(after passing force-join). Set a value to 0 to disable it."
     )
 
 
@@ -359,8 +359,8 @@ async def adm_referral_edit(callback: CallbackQuery, state: FSMContext) -> None:
     if callback.message is not None:
         await safe_edit(
             callback.message,
-            "✏️ Send the new number of tokens awarded per successful referral "
-            "(0 or more).\n\nSend /cancel to abort.",
+            "✏️ Send the new number of tokens awarded when a friend joins "
+            "through a referral link (0 or more).\n\nSend /cancel to abort.",
             admin_back_kb("adm:referral"),
         )
 

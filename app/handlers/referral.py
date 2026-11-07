@@ -34,11 +34,12 @@ async def _refer_text(session: AsyncSession, user: User) -> str:
     return (
         "👥 <b>Refer &amp; Earn</b>\n\n"
         f"Your link:\n<code>{esc(referral_link(user.user_id))}</code>\n\n"
-        "Share it with friends. When a friend joins and completes their first hide, "
-        f"you receive <b>{points} {token_word}</b>.\n\n"
+        "Share it with friends. As soon as a friend joins the bot through your "
+        f"link, you receive <b>{points} {token_word}</b> automatically.\n"
+        "You cannot earn tokens by opening your own link.\n\n"
         f"⭐ Your tokens: {balance}\n"
         f"👤 Friends joined: {total_refs}\n"
-        f"✅ Friends who completed a hide: {credited_refs}\n\n"
+        f"🎁 Friends who earned you tokens: {credited_refs}\n\n"
         "💵 Tokens are used to hide accounts and can also be redeemed for rewards."
     )
 

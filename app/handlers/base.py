@@ -12,7 +12,7 @@ from app.db import User, get_hide_cost, get_welcome_tokens
 from app.filters import IsAdmin
 from app.keyboards import back_kb, join_kb, main_menu_kb
 from app.membership import clear_user_cache, get_missing_chats, join_prompt
-from app.services import referral_counts, register_user
+from app.services import credit_referral_if_due, referral_counts, register_user
 from app.utils import esc, safe_edit
 
 router = Router(name="base")
@@ -39,8 +39,8 @@ def welcome_text(
     if bonus > 0:
         text += f"\n🎁 Welcome bonus: <b>+{bonus}</b>"
     text += (
-        "\n\nInvite friends to earn tokens. You get tokens when a friend joins "
-        "and completes their first hide."
+        "\n\nInvite friends to earn tokens. You receive tokens as soon as a friend "
+        "joins the bot with your referral link."
     )
     if settings.support_username:
         text += f"\n\n💬 Need help? Contact {esc(settings.support_username)}"
@@ -67,7 +67,7 @@ def profile_text(user: User, total_refs: int, credited_refs: int) -> str:
         f"⭐ Tokens: {tokens}\n"
         f"✅ Successful hides: {user.total_success}\n"
         f"👥 Friends joined: {total_refs}\n"
-        f"🎁 Friends who completed a hide: {credited_refs}\n"
+        f"🎁 Friends who earned you tokens: {credited_refs}\n"
         f"📅 Joined: {joined}\n\n"
         "💵 Tokens are used to hide accounts and can also be redeemed for rewards."
     )
@@ -86,8 +86,8 @@ def help_text() -> str:
         "Copy only the value, not <code>sessionid=</code>.\n"
         "📱 Mobile won't work — use a PC or laptop.\n\n"
         "<b>3. Refer &amp; earn</b>\n"
-        "Share your referral link. When a friend joins and completes their first "
-        "hide, you receive tokens.\n\n"
+        "Share your referral link. As soon as a friend joins the bot through your "
+        "link, you receive tokens automatically.\n\n"
         "<b>4. Redeem</b>\n"
         "Use tokens to claim rewards from the redeem menu.\n\n"
         "🔒 Your sessionid message is deleted immediately. For extra safety, use a "
@@ -129,6 +129,9 @@ async def cmd_start(
         await message.answer(join_prompt(missing), reply_markup=join_kb(missing))
         return
 
+    # The invited user just joined (or finished force-join): pay the referrer now.
+    await credit_referral_if_due(bot, session, user)
+
     await message.answer(
         await welcome_for(session, user, created),
         reply_markup=main_menu_kb(is_admin),
@@ -154,6 +157,7 @@ async def check_join(
 
     await state.clear()
     user, created = await register_user(session, callback.from_user)
+    await credit_referral_if_due(bot, session, user)
     is_admin = callback.from_user.id in settings.admin_ids
     await safe_edit(
         callback.message,

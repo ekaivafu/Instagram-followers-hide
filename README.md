@@ -1,6 +1,10 @@
 # Instagram Followers Hide Bot
 
-A Telegram bot that hides an Instagram account's **followers** and **following** lists using the account's own `sessionid` cookie. It includes a token economy, referral rewards, a redeem shop, force-join channels/groups, and a full admin panel.
+**Instagram Followers Hide Bot** is a self-hosted Telegram bot written in Python with [aiogram](https://aiogram.dev/). It hides an Instagram account's **followers** and **following** lists using the account's own `sessionid`, and adds a complete token economy: referral rewards, a redeem shop, force-join channels/groups, and a full admin panel.
+
+It runs locally with SQLite or in production on [Render](https://render.com/) with PostgreSQL.
+
+**Keywords:** telegram bot, instagram bot, hide followers, hide following, instagram privacy, sessionid, aiogram, python, referral system, token system, redeem rewards, force join, admin panel, self-hosted, render, sqlalchemy.
 
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![aiogram](https://img.shields.io/badge/aiogram-3.x-2CA5E0)
